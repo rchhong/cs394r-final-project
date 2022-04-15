@@ -97,17 +97,29 @@ class WordleEnv(gym.Env):
 
         # update game board and alphabet tracking
         board_row_idx = GAME_LENGTH - self.guesses_left
+
+        left = {x : 0 for x in range (26)}
+
         for idx, char in enumerate(action):
 
             if self.hidden_word[idx] == char:
                 encoding = 2
-            elif char in self.hidden_word:
-                encoding = 1
             else:
                 encoding = 0
-
+                left[self.hidden_word[idx]] += 1
             self.board[board_row_idx, idx] = encoding
             self.alphabet[char] = encoding
+
+
+        for idx, char in enumerate(action):
+            if char in self.hidden_word and left[char] >= 1:
+                encoding = 1
+                left[char] -= 1
+            else:
+                encoding = 0
+            if (self.board[board_row_idx, idx] != 2):
+                self.board[board_row_idx, idx] = encoding
+                self.alphabet[char] = encoding
 
         # update guesses remaining tracker
         self.guesses_left -= 1
@@ -115,16 +127,16 @@ class WordleEnv(gym.Env):
         # update previous guesses made
         self.guesses.append(action)
 
+
+        reward = np.sum(self.board[board_row_idx, :])
+        
         # check to see if game is over
         if all(self.board[board_row_idx, :] == 2):
-            reward = 1.0
             done = True
         else:
             if self.guesses_left > 0:
-                reward = 0.0
                 done = False
             else:
-                reward = -1.0
                 done = True
 
         return self._get_obs(), reward, done, {}
