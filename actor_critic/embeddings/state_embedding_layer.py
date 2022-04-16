@@ -14,7 +14,7 @@ def convert_to_one_hot(word_list):
     return torch.tensor(ret)
 
 
-class ActionEmbeddingLayer(torch.nn.Module):
+class StateEmbeddingLayer(torch.nn.Module):
     def __init__(self, embedding_size, word_list):
         super().__init__()
 

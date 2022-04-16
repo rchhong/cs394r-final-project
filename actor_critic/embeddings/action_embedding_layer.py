@@ -1,6 +1,5 @@
 import torch as torch
 
-
 class ActionEmbeddingLayer(torch.nn.Module):
     def __init__(self, input_size, embedding_size):
         super().__init__()
