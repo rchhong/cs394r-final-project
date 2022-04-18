@@ -17,10 +17,14 @@ class ActorCriticNet(torch.nn.Module):
         self.action_embedding = ActionEmbeddingLayer(self.embedding_size, word_list)
 
         self.actor_net = torch.nn.Sequential(*[
+            # torch.nn.Linear(self.embedding_size, self.embedding_size),
+            # torch.nn.ReLU(),
             torch.nn.Linear(self.embedding_size, self.embedding_size),
         ])
 
         self.critic_net = torch.nn.Sequential(*[
+            # torch.nn.Linear(self.embedding_size, self.embedding_size),
+            # torch.nn.ReLU(),
             torch.nn.Linear(self.embedding_size, 1),
         ])
 
@@ -29,7 +33,6 @@ class ActorCriticNet(torch.nn.Module):
     def forward(self, x):
         state_embedded = self.state_embedding(x)
         action_embedded = self.action_embedding(x)
-
 
         pred_action = self.actor_net(state_embedded)
         # Select actions that are most similar by taking the dot product
