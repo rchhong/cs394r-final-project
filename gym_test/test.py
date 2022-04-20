@@ -14,7 +14,7 @@ while not done:
             human = input()
             if (len (human) != 5):
                 pass
-            
+
             act = []
             for char in human.lower():
                 act.append (ord(char) - 97)
@@ -24,7 +24,9 @@ while not done:
             # print (act)
             # take a step
             obs, reward, done, _ = env.step(act)
+            print("obs: ", obs)
             print ("rewards (green - 2, yellow - 1, grey - 0): {}".format(reward))
+            print("done: ", done)
             break
         except InvalidWordException:
             pass

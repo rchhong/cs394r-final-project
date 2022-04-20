@@ -16,7 +16,7 @@ def convert_to_one_hot(word_list):
 
 # For agents
 def convert_to_char_index(word_list):
-    ret = np.zeroes((len(word_list), len(word_list[0])))
+    ret = np.zeros((len(word_list), len(word_list[0])))
 
     for i, word in enumerate(word_list):
         for j, char in enumerate(word):
