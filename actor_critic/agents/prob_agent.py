@@ -11,9 +11,11 @@ class ProbabilisticAgent:
         action_log_probs, _ = self.net(states)
         action_probs = action_log_probs.exp()
 
-        ret = []
+        indicies = []
+        actions = []
         for prob_dist in action_probs:
-            action = np.random.choice(len(self.env_actions), p = prob_dist.detach().numpy())
-            ret.append(self.env_actions[action])
+            action_index = np.random.choice(len(self.env_actions), p = prob_dist.detach().numpy())
+            indicies.append(action_index)
+            actions.append(self.env_actions[action_index])
 
-        return ret
+        return indicies, actions

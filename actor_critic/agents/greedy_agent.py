@@ -9,6 +9,9 @@ class GreedyAgent():
 
     def __call__(self, states):
         action_log_probs, _ = self.net(states)
-        best_action_index = np.argmax(action_log_probs.detach().numpy(), axis = 1)
 
-        return list(np.take(self.env_actions, best_action_index, axis = 0))
+        print(action_log_probs)
+        best_action_index = np.argmax(action_log_probs.detach().numpy(), axis = 1)
+        print(best_action_index)
+
+        return list(best_action_index), list(np.take(self.env_actions, best_action_index, axis = 0))
