@@ -1,5 +1,6 @@
 import torch as torch
 import numpy as np
+from os import path
 
 from const import NUM_CHARACTERS_ALPHABET
 
@@ -16,7 +17,7 @@ def convert_to_one_hot(word_list):
 
 # For agents
 def convert_to_char_index(word_list):
-    ret = np.zeros((len(word_list), len(word_list[0])))
+    ret = np.zeros((len(word_list), len(word_list[0])), dtype=int)
 
     for i, word in enumerate(word_list):
         for j, char in enumerate(word):
@@ -34,3 +35,12 @@ def load_word_list(path):
             word_list.append(word)
 
     return word_list
+
+def save_model(model, name):
+    return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '%s.th' % name))
+
+def load_model(model, name):
+    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '%s.th' % name)))
+
+def generate_dataloader(batched_data):
+    pass

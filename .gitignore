@@ -1,6 +1,7 @@
+*.th
 .vscode
 *.ipynb_checkpoints*
 notebooks*
 __pycache__
 *.egg-info
-gym_wordle/data/words.txt
+**/data/words.txt
