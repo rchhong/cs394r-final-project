@@ -84,9 +84,11 @@ class WordleEnv(gym.Env):
         self.action_space = spaces.MultiDiscrete([26] * WORD_LENGTH)
         self.observation_space = spaces.Dict({
             'board': spaces.Box(low=-1, high=2, shape=(GAME_LENGTH, WORD_LENGTH), dtype=int),
-            'alphabet': spaces.Box(low=-1, high=2, shape=(26,), dtype=int)
+            'alphabet': spaces.Box(low=-1, high=2, shape=(26,), dtype=int),
+            'state' : spaces.Box(low=0, high=2, shape=(26,5), dtype=int)
         })
         self.guesses = []
+        self.state_space = np.ones((26, 5))
 
     def step(self, action):
         assert self.action_space.contains(action)
@@ -100,13 +102,19 @@ class WordleEnv(gym.Env):
 
         left = {x : 0 for x in range (26)}
 
+
         for idx, char in enumerate(action):
 
             if self.hidden_word[idx] == char:
                 encoding = 2
+
+                #Set everything else to 0 except correct character 
+                self.state_space[:, idx] = 0
+                self.state_space[char, idx] = 2
             else:
                 encoding = 0
                 left[self.hidden_word[idx]] += 1
+
             self.board[board_row_idx, idx] = encoding
             self.alphabet[char] = encoding
 
@@ -115,17 +123,23 @@ class WordleEnv(gym.Env):
             if char in self.hidden_word and left[char] >= 1:
                 encoding = 1
                 left[char] -= 1
+                # state_space[char, idx] = 1
             else:
                 encoding = 0
+                
             if (self.board[board_row_idx, idx] != 2):
                 self.board[board_row_idx, idx] = encoding
                 self.alphabet[char] = encoding
+                self.state_space[char, idx] = 0
 
         # update guesses remaining tracker
         self.guesses_left -= 1
 
         # update previous guesses made
         self.guesses.append(action)
+
+
+
 
 
         reward = np.sum(self.board[board_row_idx, :])
@@ -142,7 +156,12 @@ class WordleEnv(gym.Env):
         return self._get_obs(), reward, done, {}
 
     def _get_obs(self):
-        return {'board': self.board, 'alphabet': self.alphabet}
+        
+
+        # for board_idx in range (len(self.guesses)):
+        #     for idx in range (5):
+
+        return {'board': self.board, 'alphabet': self.alphabet, 'state': self.state_space}
 
     def reset(self, seed: Optional[int] = None):
         # super().reset(seed=seed)
@@ -152,6 +171,8 @@ class WordleEnv(gym.Env):
             np.ones(shape=(GAME_LENGTH, WORD_LENGTH), dtype=int))
         self.alphabet = np.negative(np.ones(shape=(26,), dtype=int))
         self.guesses = []
+        self.state_space = np.ones((26, 5))
+
         return self._get_obs()
 
     def render(self, mode="human"):

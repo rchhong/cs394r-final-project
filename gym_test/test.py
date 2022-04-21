@@ -18,13 +18,13 @@ while not done:
             act = []
             for char in human.lower():
                 act.append (ord(char) - 97)
-            print (act)
             # make a random guess
             # act = env.action_space.sample()
             # print (act)
             # take a step
             obs, reward, done, _ = env.step(act)
             print ("rewards (green - 2, yellow - 1, grey - 0): {}".format(reward))
+            print (obs['state'])
             break
         except InvalidWordException:
             pass
