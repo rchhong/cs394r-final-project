@@ -160,8 +160,12 @@ class WordleEnv(gym.Env):
 
         # for board_idx in range (len(self.guesses)):
         #     for idx in range (5):
+        return_state = np.zeros((6 * 26 + 1))
+        return_state[0:26] = np.where(self.alphabet == -1, 0, 1)
+        return_state[26:-1] = self.state_space.flatten()
+        return_state[-1] = self.guesses_left
 
-        return {'board': self.board, 'alphabet': self.alphabet, 'state': self.state_space, 'guess_left': self.guesses_left}
+        return {'board': self.board, 'state': return_state}
 
     def reset(self, seed: Optional[int] = None):
         # super().reset(seed=seed)
