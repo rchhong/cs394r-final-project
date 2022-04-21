@@ -1,7 +1,7 @@
 # Reference: https://pytorch-lightning.readthedocs.io/en/latest/notebooks/lightning_examples/reinforce-learning-DQN.html
 import torch
 from torch.utils.data import IterableDataset, DataLoader
-from replay_buffer import ReplayBuffer
+from utils.replay_buffer import ReplayBuffer
 
 class ExperienceDataset(IterableDataset):
     def __init__(self, buffer, sample_size = 128):

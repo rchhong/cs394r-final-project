@@ -2,6 +2,7 @@ import torch as torch
 import numpy as np
 from utils import convert_to_one_hot, NUM_CHARACTERS_ALPHABET
 
+
 class ActionEmbeddingLayer(torch.nn.Module):
     def __init__(self, embedding_size, word_list, hidden_size = 64):
         super().__init__()
@@ -21,4 +22,4 @@ class ActionEmbeddingLayer(torch.nn.Module):
         ])
 
     def forward(self, x):
-        return self.net(self.one_hot_words.float()).to(x.get_device())
+        return self.net(self.one_hot_words.float()).to(x.device)

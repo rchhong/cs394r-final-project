@@ -2,7 +2,7 @@ import torch as torch
 import numpy as np
 from os import path
 
-from const import NUM_CHARACTERS_ALPHABET
+from utils.const import NUM_CHARACTERS_ALPHABET
 
 # For NN and embeddings
 def convert_to_one_hot(word_list):
@@ -32,7 +32,7 @@ def load_word_list(path):
 
     with open(path, 'r') as f:
         for word in f:
-            word_list.append(word)
+            word_list.append(word.strip())
 
     return word_list
 

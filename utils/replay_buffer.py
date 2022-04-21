@@ -2,7 +2,7 @@
 from collections import deque, namedtuple
 import numpy as np
 
-Experience = namedtuple("experience", field_names = ["state", "action", "next_state", "return"])
+Experience = namedtuple("experience", field_names = ["state", "action", "next_state", "ret"])
 
 class ReplayBuffer:
     def __init__(self, capacity):

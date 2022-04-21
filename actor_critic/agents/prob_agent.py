@@ -1,6 +1,6 @@
 import numpy as np
 import torch as torch
-from ...utils import convert_to_char_index
+from utils import convert_to_char_index
 
 class ProbabilisticAgent:
     def __init__(self, net, word_list):

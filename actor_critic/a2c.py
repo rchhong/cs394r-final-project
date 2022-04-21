@@ -1,7 +1,7 @@
 import torch as torch
 import numpy as np
 
-from embeddings import StateEmbeddingLayer, ActionEmbeddingLayer
+from .embeddings import StateEmbeddingLayer, ActionEmbeddingLayer
 
 class ActorCriticNet(torch.nn.Module):
     def __init__(self, state_size, word_list, embedding_size):

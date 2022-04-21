@@ -13,4 +13,7 @@ TODO: Write installation script
 # Install the gym
 cd gym-wordle
 pip install .
+
+# Train Actor Critic
+python -m actor_critic.train_a2c --words_dir ./gym-wordle/gym_wordle/data/5_words.txt
 ```
