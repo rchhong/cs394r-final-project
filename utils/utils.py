@@ -37,10 +37,10 @@ def load_word_list(path):
     return word_list
 
 def save_model(model, name):
-    return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '%s.th' % name))
+    return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name))
 
 def load_model(model, name):
-    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '%s.th' % name)))
+    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
 
 def generate_dataloader(batched_data):
     pass

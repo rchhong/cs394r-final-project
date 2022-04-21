@@ -108,6 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('--critic_beta', type=float, default=.5)
     parser.add_argument('--entropy_beta', type=float, default=.01)
 
+    # As dumb as this looks, make sure that all of these are the same for now
     parser.add_argument('-b', '--batch_size', type=float, default=32)
     parser.add_argument('-s', '--sample_size', type=float, default=32)
     parser.add_argument('-p', '--capacity', type=int, default=32)
