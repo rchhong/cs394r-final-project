@@ -110,9 +110,9 @@ if __name__ == '__main__':
 
     # As dumb as this looks, make sure that all of these are the same for now
     parser.add_argument('-b', '--batch_size', type=float, default=32)
-    parser.add_argument('-s', '--sample_size', type=float, default=32)
-    parser.add_argument('-p', '--capacity', type=int, default=32)
-    parser.add_argument('-e', '--num_new_transitions', type=int, default=32)
+    parser.add_argument('-s', '--sample_size', type=float, default=256)
+    parser.add_argument('-p', '--capacity', type=int, default=1000)
+    parser.add_argument('-e', '--num_new_transitions', type=int, default=128)
 
 
     parser.add_argument('-c', '--continue_training', action='store_true')
