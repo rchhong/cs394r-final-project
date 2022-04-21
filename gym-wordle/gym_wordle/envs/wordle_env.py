@@ -126,11 +126,11 @@ class WordleEnv(gym.Env):
                 # state_space[char, idx] = 1
             else:
                 encoding = 0
-                
+
             if (self.board[board_row_idx, idx] != 2):
                 self.board[board_row_idx, idx] = encoding
                 self.alphabet[char] = encoding
-                self.state_space[char, idx] = 0
+                self.state_space[char, :] = np.where(self.state_space[char, :]==1, encoding, self.state_space[char, :])
 
         # update guesses remaining tracker
         self.guesses_left -= 1
@@ -161,7 +161,7 @@ class WordleEnv(gym.Env):
         # for board_idx in range (len(self.guesses)):
         #     for idx in range (5):
 
-        return {'board': self.board, 'alphabet': self.alphabet, 'state': self.state_space}
+        return {'board': self.board, 'alphabet': self.alphabet, 'state': self.state_space, 'guess_left': self.guesses_left}
 
     def reset(self, seed: Optional[int] = None):
         # super().reset(seed=seed)
