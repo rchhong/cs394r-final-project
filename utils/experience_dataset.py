@@ -21,4 +21,5 @@ def generate_dataset(capacity, num_samples, batch_size):
         dataset=dataset,
         batch_size=batch_size,
     )
-    return dataloader
+
+    return buffer, dataloader

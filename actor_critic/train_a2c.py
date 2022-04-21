@@ -1,3 +1,4 @@
+from collections import deque
 import gym
 import torch.utils.tensorboard as tb
 from os import path
@@ -7,16 +8,16 @@ from actor_critic.a2c import ActorCriticNet
 from actor_critic.agents.prob_agent import ProbabilisticAgent
 from utils.generate_data import generate_a2c_data
 from utils.utils import load_model, load_word_list, save_model
+from utils.experience_dataset import generate_dataset
 
-env = gym.make('Wordle-v0')
 MODEL_NAME = "a2c"
-
 
 # TODO: Training loop
 def train(args):
     word_list = load_word_list(args.words_dir)
     model = ActorCriticNet()
-    train_agent = ProbabilisticAgent(model, word_list)
+    agent = ProbabilisticAgent(model, word_list)
+    env = gym.make('Wordle-v0')
 
     train_logger = None
     if args.log_dir is not None:
@@ -28,26 +29,35 @@ def train(args):
         load_model(model, MODEL_NAME)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=1e-5)
-    global_step = 0
 
+    replay_buffer, dataset = generate_dataset(args.capacity, args.sample_size, args.batch_size)
+    # Generate data to place in the buffer
+    inital_data = generate_a2c_data(args.capacity, args.gamma, agent, model, env, device)
+    replay_buffer.buffer = deque(inital_data, args.capacity)
+
+    global_step = 0
     for epoch in range(args.num_epoch):
         model.train()
 
-        train_data = generate_a2c_data(args.batch_size, args.gamma, train_agent, model)
+        for (state, action, next_state, ret) in dataset:
+            loss_val = loss(state, action, ret)
 
-        loss_val = loss(states, actions, returns)
+            if(global_step % 100 == 0):
+                if(train_logger):
+                    pass
+                # SAVE MODEL EVERY 100 STEPS
+                save_model(model)
 
-        if(global_step % 100 == 0):
-            if(train_logger):
-                pass
-            # SAVE MODEL EVERY 100 STEPS
-            save_model(model)
+            optimizer.zero_grad()
+            loss_val.backward()
+            optimizer.step()
 
-        optimizer.zero_grad()
-        loss_val.backward()
-        optimizer.step()
+            global_step += 1
 
-        global_step += 1
+        new_data = generate_a2c_data(args.num_new_transitions, args.gamma, agent, model, env, device)
+        for experience in new_data:
+            replay_buffer.append(experience)
+
 
         save_model(model, MODEL_NAME)
 
@@ -62,9 +72,13 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num_epoch', type=int, default=20)
     parser.add_argument('-lr', '--learning_rate', type=float, default=3e-4)
     parser.add_argument('-g', '--gamma', type=float, default=.99)
-    parser.add_argument('-b', '--batch_size', type=float, default=48)
-    parser.add_argument('-c', '--continue_training', action='store_true')
 
+    parser.add_argument('-b', '--batch_size', type=float, default=32)
+    parser.add_argument('-s', '--sample_size', type=float, default=32)
+    parser.add_argument('-p', '--capacity', type=int, default=32)
+    parser.add_argument('-e', '--num_new_transitions', type=int, default=32)
+
+    parser.add_argument('-c', '--continue_training', action='store_true')
 
     args = parser.parse_args()
     train(args)

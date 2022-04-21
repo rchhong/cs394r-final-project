@@ -1,49 +1,64 @@
 import torch
 
 # For Actor-Critic
-def generate_a2c_data(batch_size, gamma, agent, net, env, device):
-    # Need this for now to ensure accurate statistics reporting
-    assert(batch_size % 6 == 0)
+def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
     games_data = []
 
+    states = []
+    actions = []
+    rewards = []
+    next_states = []
+
+    curr_state = env.reset()
+    done = False
+
+    # Statistics
     # num_wins = 0
     # num_losses = 0
     # avg_reward_per_game = 0
 
-    while(len(games_data) < batch_size):
+    for _ in range(num_transitions):
+        action = agent(torch.Tensor([curr_state['state']], device=device))[1][0]
+        next_state, reward, done, _ = env.step(action)
 
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        # Generate episodes
-        curr_state = env.reset()
-        done = False
+        states.append(curr_state['state'])
+        actions.append(action)
+        rewards.append(reward)
+        next_states.append(next_state['state'])
 
-        while not done:
-            action = agent(torch.Tensor([curr_state['state']], device=device))[1][0]
-            next_state, reward, done, _ = env.step(action)
+        curr_state = next_state
 
-            states.append(curr_state['state'])
-            actions.append(action)
-            rewards.append(reward)
-            next_states.append(next_state['state'])
+        if done:
+            _, bootstrapped_value = net(torch.Tensor([curr_state['state']], device = device)).detach().squeeze().numpy()
+            returns = compute_returns(bootstrapped_value, rewards, gamma)
+            game_data = list(zip(states, actions, next_states, returns[::-1]))
 
-            curr_state = next_state
+            games_data.append([transition for transition in game_data])
 
-        returns = []
-        _, bootstrapped_value = net(torch.Tensor([curr_state['state']], device = device))
+            curr_state = env.reset()
+            done = False
 
-        ret = bootstrapped_value.detach().squeeze().numpy()
-        requires_bootstrap = False
-        for reward in rewards[::-1]:
-            if requires_bootstrap:
-                ret = reward + gamma * ret
-                returns.append(ret)
-            else:
-                returns.append(reward)
-            requires_bootstrap = True
+    # Finish off the stragglers
+    if(len(states)):
+        _, bootstrapped_value = net(torch.Tensor([curr_state['state']], device = device)).detach().squeeze().numpy()
+        returns = compute_returns(bootstrapped_value, rewards, gamma)
         game_data = list(zip(states, actions, next_states, returns[::-1]))
+
         games_data.append([transition for transition in game_data])
 
-    return games_data[:batch_size]
+    return games_data
+
+
+
+def compute_returns(bootstrapped_value, rewards, gamma):
+    returns = []
+
+    ret = bootstrapped_value
+    requires_bootstrap = False
+    for reward in rewards[::-1]:
+        if requires_bootstrap:
+            ret = reward + gamma * ret
+            returns.append(ret)
+        else:
+            returns.append(reward)
+        requires_bootstrap = True
