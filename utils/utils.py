@@ -27,6 +27,9 @@ def convert_to_char_index(word_list):
 
     return ret
 
+def convert_encoded_array_to_human_readable(word):
+    return ''.join(chr(c + ord('a')) for c in word)
+
 def load_word_list(path):
     word_list = []
 

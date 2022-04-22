@@ -5,3 +5,4 @@ notebooks*
 __pycache__
 *.egg-info
 **/data/words.txt
+build

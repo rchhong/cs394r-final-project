@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 # For Actor-Critic
 def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
@@ -13,9 +14,9 @@ def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
     done = False
 
     # Statistics
-    # num_wins = 0
-    # num_losses = 0
-    # avg_reward_per_game = 0
+    total_wins = 0
+    total_played = 0
+    total_rewards = 0
 
     for _ in range(num_transitions):
         pred = agent(torch.Tensor([curr_state['state']], device=device))
@@ -39,6 +40,11 @@ def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
             game_data = list(zip(states, actions, next_states, returns[::-1]))
             games_data.extend([transition for transition in game_data])
 
+            # Statistics
+            total_played += 1
+            total_wins += int(actions[-1] == env.hidden_word)
+            total_rewards += np.sum(np.array(rewards))
+
             curr_state = env.reset()
             done = False
 
@@ -58,7 +64,7 @@ def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
         games_data.extend([transition for transition in game_data])
 
     assert(len(games_data) == num_transitions)
-    return games_data
+    return games_data, total_wins, total_played, total_rewards / total_played
 
 
 
