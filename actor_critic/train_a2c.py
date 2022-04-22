@@ -82,9 +82,10 @@ def train(args):
         for experience in new_data:
             replay_buffer.append(experience)
 
+        average_rewards = (average_rewards * num_played  + new_average_rewards * new_num_played) / (num_played + new_num_played)
         num_wins += new_num_wins
         num_played += new_num_played
-        average_rewards = (average_rewards + new_average_rewards) / 2
+
 
         if train_logger:
             train_logger.add_scalar("win_rate", num_wins / num_played, global_step=global_step)
