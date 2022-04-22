@@ -42,11 +42,13 @@ def train(args):
         model.train()
 
         for (states, actions, next_states, returns) in dataset:
+            # print(len(states))
             loss_val = loss(states, actions, returns, model, args.critic_beta, args.entropy_beta)
 
             if(global_step % 100 == 0):
                 if(train_logger):
                     pass
+                # print("loss:", loss_val)
                 # SAVE MODEL EVERY 100 STEPS
                 save_model(model, MODEL_NAME)
 
@@ -100,7 +102,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir')
     parser.add_argument('--words_dir')
     # Put custom arguments here
-    parser.add_argument('-n', '--num_epoch', type=int, default=20)
+    parser.add_argument('-n', '--num_epoch', type=int, default=100)
     parser.add_argument('-lr', '--learning_rate', type=float, default=3e-4)
     parser.add_argument('-g', '--gamma', type=float, default=.99)
     parser.add_argument('-m', '--embedding_size', type=int, default=32)
