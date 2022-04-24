@@ -10,7 +10,7 @@ from actor_critic.agents import GreedyAgent
 
 
 def play_game_a2c(a2c_agent, visualize):
-    env = gym.make('Wordle-v0')
+    env = gym.make('CartPole-v0')
 
     obs = env.reset()
     done = False
@@ -19,13 +19,13 @@ def play_game_a2c(a2c_agent, visualize):
     while not done:
         while True:
             try:
-                pred = a2c_agent(torch.Tensor([obs['state']]))
+                pred = a2c_agent(torch.Tensor(obs.reshape(1,-1)))
                 env_action = pred[1][0]
-
-                actions.append(convert_encoded_array_to_human_readable(env_action))
+                # actions.append(convert_encoded_array_to_human_readable(env_action))
+                actions.append (env_action)
 
                 obs, reward, done, _ = env.step(env_action)
-
+                # print (reward)
                 break
             except InvalidWordException:
                 pass
@@ -33,7 +33,7 @@ def play_game_a2c(a2c_agent, visualize):
     if visualize:
         env.render()
 
-    return actions, convert_encoded_array_to_human_readable(env.hidden_word)
+    return actions, "hi"#convert_encoded_array_to_human_readable(env.hidden_word)
 
 
 

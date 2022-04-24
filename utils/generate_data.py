@@ -19,30 +19,30 @@ def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
     total_rewards = 0
 
     for _ in range(num_transitions):
-        pred = agent(torch.Tensor([curr_state['state']], device=device))
+        pred = agent(torch.Tensor(curr_state.reshape((1, -1)), device=device))
         env_action = pred[1][0]
         net_action = pred[0][0]
 
         next_state, reward, done, _ = env.step(env_action)
 
-        states.append(curr_state['state'])
+        states.append(curr_state)
         actions.append(net_action)
         rewards.append(reward)
-        next_states.append(next_state['state'])
+        next_states.append(next_state)
 
         curr_state = next_state
 
         if done:
-            _, bootstrapped_value = net(torch.Tensor([curr_state['state']], device = device))
+            _, bootstrapped_value = net(torch.Tensor(curr_state.reshape((1, -1)), device = device))
             bootstrapped_value = bootstrapped_value.detach().squeeze().numpy()
 
             returns = compute_returns(bootstrapped_value, rewards, gamma)
-            game_data = list(zip(states, actions, next_states, returns[::-1]))
+            game_data = list(zip(states, actions, next_states, returns))
             games_data.extend([transition for transition in game_data])
 
             # Statistics
             total_played += 1
-            total_wins += int(actions[-1] == env.hidden_word)
+            # total_wins += int(actions[-1] == env.hidden_word)
             total_rewards += np.sum(np.array(rewards))
 
             curr_state = env.reset()
@@ -55,11 +55,11 @@ def generate_a2c_data(num_transitions, gamma, agent, net, env, device):
 
     # Finish off the stragglers
     if(len(states)):
-        _, bootstrapped_value = net(torch.Tensor([curr_state['state']], device = device))
+        _, bootstrapped_value = net(torch.Tensor(curr_state.reshape((1, -1)), device = device))
         bootstrapped_value = bootstrapped_value.detach().squeeze().numpy()
 
         returns = compute_returns(bootstrapped_value, rewards, gamma)
-        game_data = list(zip(states, actions, next_states, returns[::-1]))
+        game_data = list(zip(states, actions, next_states, returns))
 
         games_data.extend([transition for transition in game_data])
 
@@ -81,4 +81,4 @@ def compute_returns(bootstrapped_value, rewards, gamma):
             returns.append(reward)
         requires_bootstrap = True
 
-    return returns
+    return torch.tensor(returns[::-1])

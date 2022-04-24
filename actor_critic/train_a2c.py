@@ -9,12 +9,14 @@ import torch
 import gym_wordle
 from actor_critic.a2c import ActorCriticNet
 from actor_critic.agents.prob_agent import ProbabilisticAgent
+from actor_critic.agents.greedy_agent import GreedyAgent
 from utils.generate_data import generate_a2c_data
 from utils.play_game import play_game_a2c
 from utils.utils import load_model, load_word_list, save_model
 from utils.experience_dataset import generate_dataset
 from utils import STATE_SIZE
 import numpy as np
+from tqdm import tqdm
 
 MODEL_NAME = "a2c"
 
@@ -36,7 +38,7 @@ def train(args):
     if args.continue_training:
         load_model(model, MODEL_NAME)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Statistics
     num_wins = 0
@@ -57,26 +59,33 @@ def train(args):
     for epoch in range(args.num_epoch):
         model.train()
 
+        avg_loss = []
+
         for (states, actions, next_states, returns) in dataset:
+            optimizer.zero_grad()
             loss_val = loss(states, actions, returns, model, args.critic_beta, args.entropy_beta)
-
+            avg_loss.append(loss_val.detach().numpy())
             if(train_logger):
-                    train_logger.add_scalar("loss", loss_val, global_step=global_step)
-
+                train_logger.add_scalar("loss", loss_val, global_step=global_step)
+            
             if(global_step % 100 == 0):
                 if(train_logger):
                     # Make the model play a game
                     games = [play_game_a2c(agent, False) for i in range(1)]
                     for game in games:
-                        valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
+                        if valid_logger:
+                            valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
+                        
                 # SAVE MODEL EVERY 100 STEPS
                 save_model(model, MODEL_NAME)
 
-            optimizer.zero_grad()
             loss_val.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0, norm_type=2)
             optimizer.step()
 
             global_step += 1
+
+        print (sum (avg_loss) / len (avg_loss))
 
         new_data, new_num_wins, new_num_played, new_average_rewards = generate_a2c_data(args.num_new_transitions, args.gamma, agent, model, env, device)
         for experience in new_data:
@@ -91,8 +100,11 @@ def train(args):
             train_logger.add_scalar("win_rate", num_wins / num_played, global_step=global_step)
             train_logger.add_scalar("num_played", num_played, global_step=global_step)
             train_logger.add_scalar("average_rewards", average_rewards, global_step=global_step)
-
-
+        elif epoch % 10 == 0:
+            print ("Winrate: {}, GamePlayed: {}, Average_Reward: {}".format (num_wins / num_played, num_played, average_rewards))
+            games = [play_game_a2c(agent, False) for i in range(100)]
+            print ("Current Win Rate: {}".format(sum ([len (x[0]) != 6 for x in games]) / 100.0))
+            print ("Actions: {}, Goal: {}".format (games[0][0], games[0][1]))
         save_model(model, MODEL_NAME)
 
 def loss(states, actions, returns, net, critic_beta, entropy_beta):
@@ -103,7 +115,7 @@ def loss(states, actions, returns, net, critic_beta, entropy_beta):
     # No gradient necessary when normalizing
     with torch.no_grad():
         # ISSUE: values and returns may be in different units, need to make sure they're the same
-        advantages = returns - ((values * (returns.std() + epsilon)) - returns.mean())
+        advantages = returns - ((values * returns.std()) + returns.mean())
 
         advantages = (advantages - advantages.mean()) / (advantages.std() + epsilon)
         targets = (returns - returns.mean()) / (returns.std() + epsilon)
@@ -111,7 +123,7 @@ def loss(states, actions, returns, net, critic_beta, entropy_beta):
 
     # Actor Loss - based on REINFORCE update rule
     # How did we get this action
-    action_log_probs = log_probs[np.arange(len(actions)), actions]
+    action_log_probs = log_probs[np.arange(len(actions), dtype=np.int_), actions.long()]
     actor_loss = (advantages * action_log_probs).mean()
 
     # Critic Loss - MSE
@@ -120,6 +132,9 @@ def loss(states, actions, returns, net, critic_beta, entropy_beta):
     # According the original paper on A2C (https://arxiv.org/pdf/1602.01783.pdf) entropy regularlization improves exploration
     probs = log_probs.exp()
     entropy = entropy_beta * (-(probs * log_probs)).sum()
+
+    # print ("ACTOR LOSS: ", actor_loss)
+    # print ("LOG PROBS: ", log_probs)
 
     return actor_loss + critic_loss - entropy
 
@@ -141,8 +156,8 @@ if __name__ == '__main__':
     parser.add_argument('--entropy_beta', type=float, default=.01)
 
     # As dumb as this looks, make sure that all of these are the same for now
-    parser.add_argument('-b', '--batch_size', type=float, default=32)
-    parser.add_argument('-s', '--sample_size', type=float, default=256)
+    parser.add_argument('-b', '--batch_size', type=int, default=32)
+    parser.add_argument('-s', '--sample_size', type=int, default=256)
     parser.add_argument('-p', '--capacity', type=int, default=1000)
     parser.add_argument('-e', '--num_new_transitions', type=int, default=128)
 

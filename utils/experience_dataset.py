@@ -1,4 +1,5 @@
 # Reference: https://pytorch-lightning.readthedocs.io/en/latest/notebooks/lightning_examples/reinforce-learning-DQN.html
+from pyparsing import col
 import torch
 from torch.utils.data import IterableDataset, DataLoader
 from utils.replay_buffer import ReplayBuffer
@@ -9,10 +10,21 @@ class ExperienceDataset(IterableDataset):
         self.sample_size = sample_size
 
     def __iter__(self):
-        states, actions, next_states, returns  = self.buffer.sample(self.sample_size)
+        returns, actions = self.buffer.sample(self.sample_size)
+        # print (returns, actions)
+        for i in range(len(returns)):
+            # print (returns[i], actions[i])
+            yield returns[i], actions[i] 
 
-        for i in range(len(states)):
-            yield states[i], actions[i], next_states[i], returns[i]
+def collate (batch):
+    returns_list = []
+    actions_list = []
+
+    for (_ret, _action) in batch:
+        # print (_ret, _action)
+        returns_list.append(_ret)
+        actions_list.append(_action)
+    return returns_list, actions_list
 
 def generate_dataset(capacity, num_samples, batch_size):
     buffer = ReplayBuffer(capacity)
@@ -20,6 +32,7 @@ def generate_dataset(capacity, num_samples, batch_size):
     dataloader = DataLoader(
         dataset=dataset,
         batch_size=batch_size,
+        collate_fn=collate
     )
 
     return buffer, dataloader
