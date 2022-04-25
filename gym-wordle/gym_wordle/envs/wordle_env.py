@@ -149,27 +149,27 @@ class WordleEnv(gym.Env):
 
         reward = 0
 
-        reward = np.sum(self.board[board_row_idx, :] -1)
+        # reward = np.sum(self.board[board_row_idx, :])
         
-        # check to see if game is over
-        if all(self.board[board_row_idx, :] == 2):
-            done = True
-        else:
-            if self.guesses_left > 0:
-                done = False
-            else:
-                done = True
-
+        # # check to see if game is over
         # if all(self.board[board_row_idx, :] == 2):
-        #     reward = 10.0
         #     done = True
         # else:
         #     if self.guesses_left > 0:
-        #         reward = 0.0
         #         done = False
         #     else:
-        #         reward = -10.0
         #         done = True
+
+        if all(self.board[board_row_idx, :] == 2):
+            reward = 10.0
+            done = True
+        else:
+            if self.guesses_left > 0:
+                reward = -1.0
+                done = False
+            else:
+                reward = -10.0
+                done = True
 
 
         return self._get_obs(), reward, done, {}
@@ -188,9 +188,7 @@ class WordleEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None):
         # super().reset(seed=seed)
-
-        # self.hidden_word = random.choice(WORDS)
-        self.hidden_word = WORDS[random.randint(0, 10)]
+        self.hidden_word = random.choice(WORDS)
         self.guesses_left = GAME_LENGTH
         self.board = np.negative(
             np.ones(shape=(GAME_LENGTH, WORD_LENGTH), dtype=int))

@@ -88,27 +88,31 @@ class Policy(nn.Module):
 
 word_list = load_word_list(args.words_dir)
 conv_word_list = convert_to_char_index(word_list)
-model = ActorCriticNet(162, word_list, args.embedding_size)
+model = ActorCriticNet(STATE_SIZE, word_list, args.embedding_size)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 eps = np.finfo(np.float32).eps.item()
 
 
 def select_action(state):
-    state = torch.from_numpy(state).reshape(1,-1).float()
-    probs, state_value = model(state)
-    # create a categorical distribution over the list of probabilities of actions
-    m = Categorical(probs)
+    state = torch.from_numpy(state).float()
+    probs, state_values = model(state)
 
-    # and sample an action using the distribution
-    action = m.sample()
+    results = []
+    for i, prob in enumerate (probs):
+
+        # create a categorical distribution over the list of probabilities of actions
+        m = Categorical(prob)
+        # and sample an action using the distribution
+        action = m.sample()
+        results.append((action.item(), SavedAction(m.log_prob(action), state_values[i])))
 
     # save to action buffer
     # model.saved_actions.append(SavedAction(m.log_prob(action), state_value))
 
     # the action to take (left or right)
     # print (SavedAction(m.log_prob(action), state_value))
-    return action.item(), SavedAction(m.log_prob(action), state_value)
-
+    return results
 
 def finish_episode(returns, saved_actions):
     """
@@ -149,6 +153,7 @@ def finish_episode(returns, saved_actions):
     # perform backprop
     loss.backward()
     optimizer.step()
+    scheduler.step(loss)
 
     return loss.detach().cpu().item()
 
@@ -169,41 +174,49 @@ def generate_a2c_data(num_transitions, env):
     # Statistics
     total_played = 0
     total_rewards = 0
+    env.reset()
 
-    for _ in range(num_transitions):
-        state = env.reset()
-        ep_reward = 0
-        rewards = []
+    states = np.zeros((num_transitions, STATE_SIZE))    
+    environments = []
+    for i in range (num_transitions):
+        env_copy = gym.make('Wordle-v0')
+        new_state = env_copy.reset()
+        environments.append(env_copy)
+        states[i] = new_state
 
-        # for each episode, only run 9999 steps so that we don't 
-        # infinite loop while learning
-        for t in range(1, 10000):
+        env_copy.storedrewards = []
+        env_copy.storedactions = []
+        env_copy.isFin = False
 
-            # select action from policy
-            action, saved_action = select_action(state)
-            actions_total[action] += 1
-            # take the action
-            state, reward, done, _ = env.step(conv_word_list[action])
+    total_rewards = 0
+    for i in range (6):
+        results = select_action(states)
 
-            rewards.append(reward)
-            actions.append(saved_action)
+        for j, (res, envs) in enumerate (zip (results, environments)):
+            if envs.isFin:
+                continue
+            state, reward, done, _ = envs.step(conv_word_list[res[0]])
+            envs.storedrewards.append(reward)
+            envs.storedactions.append(res[1])
+            envs.isFin = done
 
-            # model.rewards.append(reward)
-            ep_reward += reward
-            if done:
-                break
+            #assign new state
+            states[j] = state
 
-        total_rewards += ep_reward
+            total_rewards += reward
 
+    #all games are finished
+    for envs in environments:
         returns = []
 
         R = 0
-        for r in rewards[::-1]:
+        for r in envs.storedrewards[::-1]:
             # calculate the discounted value
             R = r + args.gamma * R
             returns.insert(0, R)
-
+        actions.extend(envs.storedactions)
         total_returns.extend(returns)
+    
     return total_returns, actions, total_rewards / num_transitions
     
 def main():
@@ -217,32 +230,22 @@ def main():
         model.eval()
         # reset environment and episode reward
         state = env.reset()
-        returns, actions, avg_rewards = generate_a2c_data(50, env)
-        # print (returns, actions)
-        # print (returns, actions)
-        # for experience in zip (returns, actions):
-        #     replay_buffer.append(experience)
-        # model.train()
-        # for (returns, actions) in dataset:
-
-        # update cumulative reward
-        # running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
-            # print ("RETURNS:", returns)
-            # print ("ACTIONS:", actions)
-            # perform backprop
+        returns, actions, avg_rewards = generate_a2c_data(10, env)
 
         loss_val = finish_episode(returns, actions)
-        agent = GreedyAgent(model, word_list)
 
-        print(play_game_a2c(agent, False, env))
-        print ("Epoch: {}, Avg Rewards: {}, Loss: {}".format (i_episode, avg_rewards, loss_val))
+
+        if (i_episode % 50 == 0):
+            agent = GreedyAgent(model, word_list)
+            print(play_game_a2c(agent, False, env))
+            print ("Epoch: {}, Avg Rewards: {}, Loss: {}".format (i_episode, avg_rewards, loss_val))
         # print (actions_total)
         # if i_episode % 10 == 0:
         #     # print ("Winrate: {}, GamePlayed: {}, Average_Reward: {}".format (num_wins / num_played, num_played, average_rewards))
         #     games = [play_game_a2c(agent, False) for i in range(100)]
         #     print ("Current Win Rate: {}".format(sum ([len (x[0]) != 6 for x in games]) / 100.0))
         #     print ("Actions: {}, Goal: {}".format (games[0][0], games[0][1]))
-        save_model(model, "a2c")
+            save_model(model, "a2c")
 
 
 def play_game_a2c(a2c_agent, visualize, env):
