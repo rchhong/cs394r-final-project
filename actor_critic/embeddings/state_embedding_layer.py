@@ -10,9 +10,9 @@ class StateEmbeddingLayer(torch.nn.Module):
 
         self.net = torch.nn.Sequential(*[
             torch.nn.Linear(self.state_size, self.hidden_size),
-            torch.nn.SiLU(),
+            torch.nn.ReLU(),
             torch.nn.Linear(self.hidden_size, self.hidden_size),
-            torch.nn.SiLU(),
+            torch.nn.ReLU(),
             torch.nn.Linear(self.hidden_size, self.embedding_size)
         ])
 
