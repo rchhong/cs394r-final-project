@@ -19,12 +19,10 @@ def play_game_a2c(a2c_agent, visualize):
     while not done:
         while True:
             try:
-                pred = a2c_agent(torch.Tensor([obs['state']]))
-                env_action = pred[1][0]
+                action, log_prob_action, entropy, state_value = a2c_agent(torch.Tensor(obs))
+                actions.append(convert_encoded_array_to_human_readable(action))
 
-                actions.append(convert_encoded_array_to_human_readable(env_action))
-
-                obs, reward, done, _ = env.step(env_action)
+                obs, reward, done, _ = env.step(action)
 
                 break
             except InvalidWordException:
