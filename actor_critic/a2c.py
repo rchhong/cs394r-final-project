@@ -1,5 +1,5 @@
 import torch as torch
-import numpy as np
+import torch.nn.functional as F
 
 from .embeddings import StateEmbeddingLayer, ActionEmbeddingLayer
 
@@ -17,14 +17,14 @@ class ActorCriticNet(torch.nn.Module):
         self.action_embedding = ActionEmbeddingLayer(self.embedding_size, word_list)
 
         self.actor_net = torch.nn.Sequential(*[
-            # torch.nn.Linear(self.embedding_size, self.embedding_size),
-            # torch.nn.ReLU(),
+            torch.nn.Linear(self.embedding_size, self.embedding_size),
+            torch.nn.ReLU(),
             torch.nn.Linear(self.embedding_size, self.embedding_size),
         ])
 
         self.critic_net = torch.nn.Sequential(*[
-            # torch.nn.Linear(self.embedding_size, self.embedding_size),
-            # torch.nn.ReLU(),
+            torch.nn.Linear(self.embedding_size, self.embedding_size),
+            torch.nn.ReLU(),
             torch.nn.Linear(self.embedding_size, 1),
         ])
 
@@ -36,9 +36,9 @@ class ActorCriticNet(torch.nn.Module):
 
         pred_action = self.actor_net(state_embedded)
         # Select actions that are most similar by taking the dot product
-        similarity_index = torch.tensordot(pred_action, action_embedded, dims = ([1], [1]))
+        similarity_index = torch.tensordot(pred_action, action_embedded, dims = ([0], [1]))
 
-        action_log_probs = torch.log_softmax(similarity_index, dim = -1)
+        action_probs = torch.softmax(similarity_index, dim = -1)
         v_s = self.critic_net(state_embedded)
 
-        return action_log_probs, v_s
+        return action_probs, v_s

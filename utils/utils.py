@@ -17,15 +17,23 @@ def convert_to_one_hot(word_list):
 
 # For agents
 def convert_to_char_index(word_list):
-    ret = np.zeros((len(word_list), len(word_list[0])), dtype=int)
-
-    for i, word in enumerate(word_list):
-        for j, char in enumerate(word):
+    # print(word_list)
+    if(type(word_list) != list):
+        ret = []
+        for i, char in enumerate(word_list):
             val = ord(char) - ord('a')
+            ret.append(val)
 
-            ret[i, j] = val
+        return ret
+    else:
+        ret = np.zeros((len(word_list), len(word_list[0])), dtype=int)
 
-    return ret
+        for i, word in enumerate(word_list):
+            for j, char in enumerate(word):
+                val = ord(char) - ord('a')
+
+                ret[i, j] = val
+        return ret
 
 def convert_encoded_array_to_human_readable(word):
     return ''.join(chr(c + ord('a')) for c in word)
