@@ -1,5 +1,6 @@
 import numpy as np
 import torch as torch
+from torch.distributions import Categorical
 from utils import convert_to_char_index
 
 class ProbabilisticAgent:
@@ -11,11 +12,15 @@ class ProbabilisticAgent:
         action_log_probs, _ = self.net(states)
         action_probs = action_log_probs.exp()
 
-        indicies = []
         actions = []
+        action_probs = []
+        state_value = []
+
         for prob_dist in action_probs:
-            action_index = np.random.choice(len(self.env_actions), p = prob_dist.detach().numpy())
+            dist = Categorical(probs = prob_dist.detach().numpy())
+            action_index = dist.sample().detach().item()
+
             indicies.append(action_index)
             actions.append(self.env_actions[action_index])
 
-        return indicies, actions
+        return actions, action_probs, state_value
