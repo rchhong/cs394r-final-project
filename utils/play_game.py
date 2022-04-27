@@ -3,6 +3,7 @@ import gym_wordle
 import torch
 from gym_wordle.exceptions import InvalidWordException
 from actor_critic.a2c import ActorCriticNet
+from actor_critic.agents.prob_agent import ProbabilisticAgent
 from utils import load_model
 from utils.const import STATE_SIZE
 from utils.utils import load_word_list, convert_encoded_array_to_human_readable

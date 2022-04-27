@@ -1,5 +1,4 @@
 # from utils.play_game import play_game_a2c
-from ast import parse
 from os import path
 from random import sample
 import gym
@@ -71,7 +70,7 @@ def train(args):
                 if(global_step % 100 == 0):
                     if(train_logger):
                         # Make the model play a game
-                        games = [play_game_a2c(agent, False) for i in range(1)]
+                        games = [play_game_a2c(agent, False) for i in range(5)]
                         for game in games:
                             valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
                     # SAVE MODEL EVERY 100 STEPS
@@ -117,7 +116,7 @@ def loss(total_returns, log_prob_actions, entropies, state_values, critic_beta, 
         # Critic Loss - MSE
         critic_losses.append(F.smooth_l1_loss(state_value, torch.tensor([ret])))
 
-    loss = (torch.stack(actor_losses).sum() + entropy_beta * torch.stack(entropies).sum()) + critic_beta * torch.stack(critic_losses).sum()
+    loss = (torch.stack(actor_losses).sum() - entropy_beta * torch.stack(entropies).sum()) + critic_beta * torch.stack(critic_losses).sum()
     # print("loss:", loss)
 
     return loss
@@ -186,7 +185,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
 
         total_rewards += ep_reward
         num_played += 1
-        if(action == env.hidden_word):
+        if(action == list(env.hidden_word)):
             num_wins += 1
 
         returns = []
@@ -199,7 +198,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
         total_returns.extend(returns)
 
     average_rewards_per_batch = total_rewards / batch_size
-    print(average_rewards_per_batch)
+    # print(average_rewards_per_batch)
     return total_returns, log_prob_actions, entropies, state_values
 
 if __name__ == '__main__':
@@ -210,9 +209,9 @@ if __name__ == '__main__':
     parser.add_argument('--log_dir')
     parser.add_argument('--words_dir')
     # Put custom arguments here
-    parser.add_argument('-n', '--num_episodes', type=int, default=1000)
+    parser.add_argument('-n', '--num_episodes', type=int, default=10000)
     parser.add_argument('-b', '--batch_size', type=float, default=64)
-    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-2)
+    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3)
     parser.add_argument('-g', '--gamma', type=float, default=.99)
     parser.add_argument('-m', '--embedding_size', type=int, default=32)
 

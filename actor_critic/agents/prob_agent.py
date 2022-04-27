@@ -8,9 +8,9 @@ class ProbabilisticAgent:
         self.word_list = word_list
 
     def __call__(self, state):
-        action_probs, state_value = self.net(state)
+        action_log_probs, state_value = self.net(state)
 
-        dist = Categorical(probs = action_probs)
+        dist = Categorical(probs = action_log_probs.exp())
         action = dist.sample()
 
         return convert_to_char_index(self.word_list[action.item()]), dist.log_prob(action), dist.entropy(), state_value
