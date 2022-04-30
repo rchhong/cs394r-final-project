@@ -1,6 +1,7 @@
 # from utils.play_game import play_game_a2c
 from os import path
 from random import sample
+from sched import scheduler
 import gym
 import gym_wordle
 import torch
@@ -44,8 +45,12 @@ def train(args):
         load_model(model, MODEL_NAME)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     global_step = 0
+    # TODO: LR Scheduler
+    # TODO: Kaiming initialization
+    # TODO: Lower LR
     for num_episodes in range(args.num_episodes):
         model.train()
 
@@ -61,8 +66,13 @@ def train(args):
             goal_word = convert_encoded_array_to_human_readable(sample_game[-1])
             train_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(actions) + " GOAL: " + goal_word, global_step=global_step)
 
+            # train_logger.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=global_step)
+
         optimizer.zero_grad()
         loss_val = loss(total_returns, log_prob_actions, entropies, state_values, args.critic_beta, args.entropy_beta)
+        loss_val.backward()
+        optimizer.step()
+        # scheduler.step()
 
         if(train_logger):
                 train_logger.add_scalar("loss", loss_val, global_step=global_step)
@@ -77,21 +87,9 @@ def train(args):
                     save_model(model, MODEL_NAME)
 
 
-        loss_val.backward()
-        optimizer.step()
+
 
         global_step += 1
-
-        # average_rewards = (average_rewards * num_played  + new_average_rewards * new_num_played) / (num_played + new_num_played)
-        # num_wins += new_num_wins
-        # num_played += new_num_played
-
-
-        # if train_logger:
-        #     train_logger.add_scalar("win_rate", num_wins / num_played, global_step=global_step)
-        #     train_logger.add_scalar("num_played", num_played, global_step=global_step)
-        #     train_logger.add_scalar("average_rewards", average_rewards, global_step=global_step)
-
 
         save_model(model, MODEL_NAME)
 
@@ -183,6 +181,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
             sample_game.append(env.hidden_word)
         record_data = False
 
+        # TODO: Change to win_rate per batch
         total_rewards += ep_reward
         num_played += 1
         if(action == list(env.hidden_word)):
@@ -211,8 +210,8 @@ if __name__ == '__main__':
     # Put custom arguments here
     parser.add_argument('-n', '--num_episodes', type=int, default=10000)
     parser.add_argument('-b', '--batch_size', type=float, default=64)
-    parser.add_argument('-lr', '--learning_rate', type=float, default=1e-3)
-    parser.add_argument('-g', '--gamma', type=float, default=.99)
+    parser.add_argument('-lr', '--learning_rate', type=float, default=3e-4)
+    parser.add_argument('-g', '--gamma', type=float, default=.9)
     parser.add_argument('-m', '--embedding_size', type=int, default=32)
 
     parser.add_argument('--critic_beta', type=float, default=1)
