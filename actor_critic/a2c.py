@@ -16,7 +16,8 @@ class ActorCriticNet(torch.nn.Module):
         ]
         for _ in range(n_hidden):
             layers.append(nn.Linear(hidden_size, hidden_size))
-            layers.append(nn.ReLU())
+            # layers.append(nn.Dropout(0.3))
+            layers.append(nn.Mish())
         layers.append(nn.Linear(hidden_size, self.n_emb))
 
         self.f_state = nn.Sequential(*layers)
@@ -34,7 +35,7 @@ class ActorCriticNet(torch.nn.Module):
         # W x word_width -> W x emb
         self.f_word = nn.Sequential(
             nn.Linear(word_width, 64),
-            nn.ReLU(),
+            nn.Mish(),
             nn.Linear(64, self.n_emb),
         )
 

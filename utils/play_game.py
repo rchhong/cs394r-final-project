@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     word_list = load_word_list(args.words_dir)
 
-    model = ActorCriticNet(162, word_list, args.embedding_size)
+    model = ActorCriticNet(STATE_SIZE, word_list, args.embedding_size)
     load_model(model, "a2c")
 
     agent = GreedyAgent(model, word_list)

@@ -88,7 +88,8 @@ class WordleEnv(gym.Env):
             'state' : spaces.Box(low=0, high=2, shape=(26,5), dtype=int)
         })
         self.guesses = []
-        self.state_space = np.ones((26, 5))
+        self.state_space = np.zeros((26, 5, 3), dtype=np.int0)
+        self.state_space[:,:,1] = 1
 
     def step(self, action):
         assert self.action_space.contains(action)
@@ -109,8 +110,9 @@ class WordleEnv(gym.Env):
                 encoding = 2
 
                 #Set everything else to 0 except correct character 
-                self.state_space[:, idx] = 0
-                self.state_space[char, idx] = 2
+                self.state_space[:, idx, 0] = 1
+                self.state_space[char, idx, :] = 0
+                self.state_space[char, idx, 2] = 1
             else:
                 encoding = 0
                 left[self.hidden_word[idx]] += 1
@@ -130,7 +132,10 @@ class WordleEnv(gym.Env):
             if (self.board[board_row_idx, idx] != 2):
                 self.board[board_row_idx, idx] = encoding
                 self.alphabet[char] = encoding
-                self.state_space[char, :] = np.where(self.state_space[char, :]==1, encoding, self.state_space[char, :])
+                res = np.where(self.state_space[char, :, 1] == 1, encoding, np.argmax (self.state_space[char], axis=1))
+                b = np.zeros((5, 3))
+                b[np.arange(5), res] = 1
+                self.state_space[char, :] = b
 
         # update guesses remaining tracker
         self.guesses_left -= 1
@@ -176,12 +181,14 @@ class WordleEnv(gym.Env):
 
     def _get_obs(self):
         
-
+        # for i in range (26):
+        #     # print (self.state_space[i])
+        #     print (chr(i + 97), np.argmax (self.state_space[i], axis=1))
         # for board_idx in range (len(self.guesses)):
         #     for idx in range (5):
-        return_state = np.zeros((6 * 26 + 6))
+        return_state = np.zeros((26 + 5 * 26 * 3 + 6))
         return_state[0:26] = np.where(self.alphabet == -1, 0, 1)
-        return_state[26:-6] = self.state_space.flatten() / 2
+        return_state[26:-6] = self.state_space.flatten()
         return_state[6 * 26 + self.guesses_left - 1] = 1
         
         return return_state
@@ -194,8 +201,8 @@ class WordleEnv(gym.Env):
             np.ones(shape=(GAME_LENGTH, WORD_LENGTH), dtype=int))
         self.alphabet = np.negative(np.ones(shape=(26,), dtype=int))
         self.guesses = []
-        self.state_space = np.ones((26, 5))
-
+        self.state_space = np.zeros((26, 5, 3), dtype=np.int0)
+        self.state_space[:,:,1] = 1
         return self._get_obs()
 
     def render(self, mode="human"):

@@ -148,8 +148,7 @@ def finish_episode(returns, saved_actions):
     optimizer.zero_grad()
 
     # sum up all the values of policy_losses and value_losses
-    loss = torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()
-
+    loss = (torch.stack(policy_losses).sum() + torch.stack(value_losses).sum()) / 50.0
     # perform backprop
     loss.backward()
     optimizer.step()
@@ -227,15 +226,15 @@ def main():
     # replay_buffer.buffer = deque(list (zip (returns, actions)), args.capacity)
     # run inifinitely many episodes
     for i_episode in count(1):
-        model.eval()
         # reset environment and episode reward
+        model.train()
         state = env.reset()
-        returns, actions, avg_rewards = generate_a2c_data(10, env)
+        returns, actions, avg_rewards = generate_a2c_data(50, env)
 
         loss_val = finish_episode(returns, actions)
 
-
-        if (i_episode % 50 == 0):
+        model.eval()
+        if (i_episode % 10 == 0):
             agent = GreedyAgent(model, word_list)
             print(play_game_a2c(agent, False, env))
             print ("Epoch: {}, Avg Rewards: {}, Loss: {}".format (i_episode, avg_rewards, loss_val))
