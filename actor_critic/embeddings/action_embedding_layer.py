@@ -16,9 +16,7 @@ class ActionEmbeddingLayer(torch.nn.Module):
         self.net = torch.nn.Sequential(*[
             torch.nn.Linear(self.action_size, self.hidden_size),
             torch.nn.ReLU(),
-            torch.nn.Linear(self.hidden_size, self.hidden_size),
-            torch.nn.ReLU(),
-            torch.nn.Linear(self.hidden_size, self.embedding_size)
+            torch.nn.Linear(self.hidden_size, self.embedding_size),
         ])
 
     def forward(self, x):

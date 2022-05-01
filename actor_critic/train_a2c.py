@@ -25,6 +25,7 @@ num_wins = 0
 num_played = 0
 average_rewards_per_batch = 0
 sample_game = []
+num_wins_batch = 0
 
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
@@ -58,7 +59,8 @@ def train(args):
         total_returns, log_prob_actions, entropies, state_values = generate_a2c_data(agent, args.batch_size, args.gamma, env)
 
         if train_logger:
-            train_logger.add_scalar("win_rate", num_wins / num_played, global_step=global_step)
+            train_logger.add_scalar("cumulative_win_rate", num_wins / num_played, global_step=global_step)
+            train_logger.add_scalar("batch_win_rate", num_wins_batch / args.batch_size, global_step=global_step)
             train_logger.add_scalar("num_played", num_played, global_step=global_step)
             train_logger.add_scalar("average_rewards", average_rewards_per_batch, global_step=global_step)
 
@@ -130,6 +132,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
     global num_played
     global average_rewards_per_batch
     global sample_game
+    global num_wins_batch
 
     states = []
     log_prob_actions = []
@@ -143,6 +146,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
     total_rewards = 0
 
     record_data = True
+    num_wins_batch = 0
 
     for _ in range(batch_size):
         state = env.reset()
@@ -186,6 +190,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
         num_played += 1
         if(action == list(env.hidden_word)):
             num_wins += 1
+            num_wins_batch += 1
 
         returns = []
         R = 0
