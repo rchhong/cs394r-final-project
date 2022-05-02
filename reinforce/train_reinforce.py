@@ -9,16 +9,20 @@ import torch.nn.functional as F
 import torch.utils.tensorboard as tb
 import numpy as np
 
-from actor_critic.a2c import ActorCriticNet
-from actor_critic.agents.prob_agent import ProbabilisticAgent
+from reinforce.reinforce import REINFORCEWithBaseline
+from agents.prob_agent import ProbabilisticAgent
 
 from utils import STATE_SIZE, load_model, load_word_list, save_model
-from utils.play_game import play_game_a2c
+from utils.play_game import play_game_reinforce
 from utils.utils import convert_encoded_array_to_human_readable
+from datetime import datetime
 
-MODEL_NAME = "a2c"
+
+
+MODEL_NAME = "reinforce"
 EMBEDDING_SIZE = 32
 rng = np.random.default_rng(12345)
+now = datetime.now()
 
 # Statistics
 num_wins = 0
@@ -30,15 +34,15 @@ num_wins_batch = 0
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
     word_list = load_word_list(args.words_dir)
-    model = ActorCriticNet(STATE_SIZE, word_list, EMBEDDING_SIZE)
+    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
     agent = ProbabilisticAgent(model, word_list)
     env = gym.make("Wordle-v0")
 
     train_logger = None
     valid_logger = None
     if args.log_dir is not None:
-        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'train'), flush_secs=1)
-        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'valid'), flush_secs=1)
+        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'train'), flush_secs=1)
+        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'valid'), flush_secs=1)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = model.to(device)
@@ -82,7 +86,7 @@ def train(args):
                 if(global_step % 100 == 0):
                     if(train_logger):
                         # Make the model play a game
-                        games = [play_game_a2c(agent, False) for i in range(5)]
+                        games = [play_game_reinforce(agent, False) for i in range(5)]
                         for game in games:
                             valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
                     # SAVE MODEL EVERY 100 STEPS

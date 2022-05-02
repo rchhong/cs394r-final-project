@@ -3,9 +3,9 @@ import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
 
-from .embeddings import StateEmbeddingLayer, ActionEmbeddingLayer
+from embeddings import StateEmbeddingLayer, ActionEmbeddingLayer
 
-class ActorCriticNet(torch.nn.Module):
+class REINFORCEWithBaseline(torch.nn.Module):
     def __init__(self, state_size, word_list, embedding_size):
         super().__init__()
         self.embedding_size = embedding_size
