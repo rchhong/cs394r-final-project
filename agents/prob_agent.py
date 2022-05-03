@@ -10,6 +10,7 @@ class ProbabilisticAgent:
     def __call__(self, state):
         action_log_probs, state_value = self.net(state)
 
+        # print(action_log_probs.exp())
         dist = Categorical(probs = action_log_probs.exp())
         action = dist.sample()
 

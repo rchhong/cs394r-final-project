@@ -1,4 +1,5 @@
 # from utils.play_game import play_game_a2c
+from ensurepip import bootstrap
 from os import path
 from random import sample
 from sched import scheduler
@@ -9,7 +10,7 @@ import torch.nn.functional as F
 import torch.utils.tensorboard as tb
 import numpy as np
 
-from reinforce.reinforce import REINFORCEWithBaseline
+from actor_critic.a2c import ActorCriticNet
 from agents.prob_agent import ProbabilisticAgent
 
 from utils import STATE_SIZE, load_model, load_word_list, save_model
@@ -19,7 +20,7 @@ from datetime import datetime
 
 
 
-MODEL_NAME = "reinforce"
+MODEL_NAME = "a2c"
 EMBEDDING_SIZE = 32
 rng = np.random.default_rng(12345)
 now = datetime.now()
@@ -34,15 +35,15 @@ num_wins_batch = 0
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
     word_list = load_word_list(args.words_dir)
-    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
+    model = ActorCriticNet(STATE_SIZE, word_list, EMBEDDING_SIZE)
     agent = ProbabilisticAgent(model, word_list)
     env = gym.make("Wordle-v0")
 
     train_logger = None
     valid_logger = None
     if args.log_dir is not None:
-        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'train'), flush_secs=1)
-        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'valid'), flush_secs=1)
+        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'A2C', now.strftime("%Y%m%d-%H%M%S"), 'train'), flush_secs=1)
+        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'A2C', now.strftime("%Y%m%d-%H%M%S"), 'valid'), flush_secs=1)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = model.to(device)
@@ -53,14 +54,11 @@ def train(args):
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     global_step = 0
-    # TODO: LR Scheduler
-    # TODO: Kaiming initialization
-    # TODO: Lower LR
     for num_episodes in range(args.num_episodes):
         model.train()
 
         # Play some games, gather experiences
-        total_returns, log_prob_actions, entropies, state_values = generate_reinforce_data(agent, args.batch_size, args.gamma, env)
+        states, td_errors, log_prob_actions, entropies, state_values = generate_a2c_data(agent, args.batch_size, args.gamma, env)
 
         if train_logger:
             train_logger.add_scalar("cumulative_win_rate", num_wins / num_played, global_step=global_step)
@@ -75,7 +73,7 @@ def train(args):
             # train_logger.add_scalar("lr", optimizer.param_groups[0]['lr'], global_step=global_step)
 
         optimizer.zero_grad()
-        loss_val = loss(total_returns, log_prob_actions, entropies, state_values, args.critic_beta, args.entropy_beta)
+        loss_val = loss(states, td_errors, log_prob_actions, entropies, state_values, args.critic_beta, args.entropy_beta)
         loss_val.backward()
         optimizer.step()
         # scheduler.step()
@@ -99,26 +97,22 @@ def train(args):
 
         save_model(model, MODEL_NAME)
 
-def loss(total_returns, log_prob_actions, entropies, state_values, critic_beta, entropy_beta):
+def loss(states, td_errors, log_prob_actions, entropies, state_values, critic_beta, entropy_beta):
     # No divide by 0
     epsilon = torch.finfo(torch.float32).eps
     # No gradient necessary when normalizing
 
-    returns = torch.tensor(total_returns)
-    returns = (returns - returns.mean()) / (returns.std() + epsilon)
-
     actor_losses = []
     critic_losses = []
 
-    for ret, log_prob, state_value in zip(total_returns, log_prob_actions, state_values):
-        advantage = ret - state_value.item()
-
+    for td_error, log_prob, state_value in zip(td_errors, log_prob_actions, state_values):
+        advantage = td_error - state_value
         # Actor Loss - based on REINFORCE update rule
         # Gradient ASCENT not DESCENT
-        actor_losses.append(-advantage * log_prob)
+        actor_losses.append(-(advantage.item()) * log_prob)
 
-        # Critic Loss - MSE
-        critic_losses.append(F.smooth_l1_loss(state_value, torch.tensor([ret])))
+        # Critic Loss - TD Error
+        critic_losses.append(advantage)
 
     loss = (torch.stack(actor_losses).sum() - entropy_beta * torch.stack(entropies).sum()) + critic_beta * torch.stack(critic_losses).sum()
     # print("loss:", loss)
@@ -131,7 +125,7 @@ def save_model(model, name):
 def load_model(model, name):
     model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
 
-def generate_reinforce_data(agent, batch_size, gamma, env):
+def generate_a2c_data(agent, batch_size, gamma, env):
     global num_wins
     global num_played
     global average_rewards_per_batch
@@ -141,7 +135,7 @@ def generate_reinforce_data(agent, batch_size, gamma, env):
     states = []
     log_prob_actions = []
     state_values = []
-    total_returns = []
+    td_errors = []
     entropies = []
     next_states = []
 
@@ -162,7 +156,7 @@ def generate_reinforce_data(agent, batch_size, gamma, env):
             del sample_game[:]
 
         for t in range(6):
-
+            states.append(state)
             # select action from policy
             action, log_prob_action, entropy, state_value = agent(torch.Tensor(state))
             if(record_data):
@@ -192,18 +186,21 @@ def generate_reinforce_data(agent, batch_size, gamma, env):
             num_wins += 1
             num_wins_batch += 1
 
-        returns = []
-        R = 0
-        for r in rewards[::-1]:
+        curr_td_errors = []
+        for i in range(len(rewards)):
             # calculate the discounted value
-            R = r + gamma * R
-            returns.insert(0, R)
+            next_state_value = 0
+            if(i + 1 < len(rewards)):
+                next_state_value = state_values[i + 1]
 
-        total_returns.extend(returns)
+            td_error = torch.Tensor([rewards[i]]) + gamma * next_state_value - state_values[i]
+            curr_td_errors.append(td_error)
+
+        td_errors.extend(curr_td_errors)
 
     average_rewards_per_batch = total_rewards / batch_size
     # print(average_rewards_per_batch)
-    return total_returns, log_prob_actions, entropies, state_values
+    return states, td_errors, log_prob_actions, entropies, state_values
 
 if __name__ == '__main__':
     import argparse

@@ -26,13 +26,12 @@ pip install -r requirements.txt
 cd gym-wordle
 pip install .
 
-# Train Actor Critic
 cd ..
 mkdir models
 ```
 
 ## REINFORCE with Baseline
-To run the training for REINFORCE with baseline, run the following command.
+To run the training for REINFORCE with baseline, run the following command from the project root directory.
 ```shell
 python3 -m reinforce.train_reinforce --words_dir ./gym-wordle/gym_wordle/data/5_words.txt --log_dir log
 ```
@@ -40,4 +39,9 @@ python3 -m reinforce.train_reinforce --words_dir ./gym-wordle/gym_wordle/data/5_
 TensorBoard logging can be accessed in `log/REINFORCE`.
 
 ## Actor-Critic Methods
+To run the training for A2C, run the following command from the project root directory.
+```shell
+python3 -m actor_critic.train_a2c --words_dir ./gym-wordle/gym_wordle/data/5_words.txt --log_dir log
+```
 
+TensorBoard logging can be accessed in `log/A2C`.
