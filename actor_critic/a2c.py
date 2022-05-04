@@ -11,7 +11,7 @@ class ActorCriticNet(torch.nn.Module):
         self.embedding_size = embedding_size
 
         self.state_embedding = StateEmbeddingLayer(state_size, embedding_size)
-        self.action_embedding = ActionEmbeddingLayer(embedding_size, word_list)
+        self.action_embedding = ActionEmbeddingLayer(embedding_size, word_list, hidden_size=128)
 
         self.actor_head = nn.Linear(self.embedding_size, self.embedding_size)
         self.critic_head = nn.Linear(self.embedding_size, 1)

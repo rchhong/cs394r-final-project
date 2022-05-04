@@ -15,9 +15,10 @@ from actor_critic.agents.prob_agent import ProbabilisticAgent
 from utils import STATE_SIZE, load_model, load_word_list, save_model
 from utils.play_game import play_game_a2c
 from utils.utils import convert_encoded_array_to_human_readable
+from tqdm import tqdm
 
 MODEL_NAME = "a2c"
-EMBEDDING_SIZE = 32
+EMBEDDING_SIZE = 64
 rng = np.random.default_rng(12345)
 
 # Statistics
@@ -27,9 +28,15 @@ average_rewards_per_batch = 0
 sample_game = []
 num_wins_batch = 0
 
+#Starts with all ones. Add one if model fails on that word (make it more likely the model returns that word)
+word_weights = None
+
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
     word_list = load_word_list(args.words_dir)
+    global word_weights
+    word_weights = np.ones((len(word_list)))
+
     model = ActorCriticNet(STATE_SIZE, word_list, EMBEDDING_SIZE)
     agent = ProbabilisticAgent(model, word_list)
     env = gym.make("Wordle-v0")
@@ -52,7 +59,30 @@ def train(args):
     # TODO: LR Scheduler
     # TODO: Kaiming initialization
     # TODO: Lower LR
-    for num_episodes in range(args.num_episodes):
+    for num_episodes in tqdm (range(args.num_episodes)):
+
+        # if (num_episodes % 200 == 0):
+        #     print("Running Benchmark")
+        #     win_amt = 0
+        #     #Reset Word_weights here
+        #     with torch.no_grad():
+        #         for idx, word in enumerate (tqdm(word_list)):
+                    
+        #             state = env.reset()
+        #             env.hidden_word = [ord(c) - 97 for c in word]
+        #             for i in range (6):
+        #                 action, log_prob_action, entropy, state_value = agent(torch.Tensor(state))
+        #                 state, reward, done, __ = env.step(action)
+
+        #                 if (done):
+        #                     break
+        #             if (reward == 10):
+        #                 word_weights[idx] = 1
+        #                 win_amt += 1
+        #             else:
+        #                 word_weights[idx] += 1
+                        
+        #     print ("Benchmark completed: Win Rate of all words: {}".format(win_amt / len(word_list)))
         model.train()
 
         # Play some games, gather experiences
@@ -77,16 +107,16 @@ def train(args):
         # scheduler.step()
 
         if(train_logger):
-                train_logger.add_scalar("loss", loss_val, global_step=global_step)
+            train_logger.add_scalar("loss", loss_val, global_step=global_step)
 
-                if(global_step % 100 == 0):
-                    if(train_logger):
-                        # Make the model play a game
-                        games = [play_game_a2c(agent, False) for i in range(5)]
-                        for game in games:
-                            valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
-                    # SAVE MODEL EVERY 100 STEPS
-                    save_model(model, MODEL_NAME)
+            if(global_step % 100 == 0):
+                if(train_logger):
+                    # Make the model play a game
+                    games = [play_game_a2c(agent, False) for i in range(5)]
+                    for game in games:
+                        valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
+                # SAVE MODEL EVERY 100 STEPS
+                save_model(model, MODEL_NAME)
 
 
 
@@ -127,6 +157,9 @@ def save_model(model, name):
 def load_model(model, name):
     model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
 
+
+warm_start_brackets = [0.01]
+
 def generate_a2c_data(agent, batch_size, gamma, env):
     global num_wins
     global num_played
@@ -149,7 +182,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
     num_wins_batch = 0
 
     for _ in range(batch_size):
-        state = env.reset()
+        state = env.reset(weight = word_weights)
 
         ep_reward = 0
         rewards = []
@@ -163,7 +196,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
         for t in range(6):
 
             # select action from policy
-            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state))
+            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state), t * warm_start_brackets[min (num_played // 1000, len (warm_start_brackets) - 1) ] / 6, env.hidden_word_idx)
             if(record_data):
                 sample_game.append(action)
             # print("action:", action)
@@ -191,6 +224,9 @@ def generate_a2c_data(agent, batch_size, gamma, env):
         if(action == list(env.hidden_word)):
             num_wins += 1
             num_wins_batch += 1
+            word_weights[env.hidden_word_idx] = 1
+        else:
+            word_weights[env.hidden_word_idx] = word_weights[env.hidden_word_idx] * 0.95 + 1
 
         returns = []
         R = 0

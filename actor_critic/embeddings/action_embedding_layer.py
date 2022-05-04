@@ -11,7 +11,7 @@ class ActionEmbeddingLayer(torch.nn.Module):
         self.hidden_size = hidden_size
         self.embedding_size = embedding_size
         self.word_list = word_list
-        self.one_hot_words = convert_to_one_hot(word_list)
+        self.one_hot_words = convert_to_one_hot(word_list).float()
 
         self.net = torch.nn.Sequential(*[
             torch.nn.Linear(self.action_size, self.hidden_size),
@@ -20,4 +20,4 @@ class ActionEmbeddingLayer(torch.nn.Module):
         ])
 
     def forward(self, x):
-        return self.net(self.one_hot_words.float()).to(x.device)
+        return self.net(self.one_hot_words).to(x.device)

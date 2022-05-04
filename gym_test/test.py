@@ -14,20 +14,17 @@ while not done:
             human = input()
             if (len (human) != 5):
                 pass
-
+            
             act = []
             for char in human.lower():
                 act.append (ord(char) - 97)
+            print (act)
             # make a random guess
             # act = env.action_space.sample()
             # print (act)
             # take a step
             obs, reward, done, _ = env.step(act)
-            if(act == env.hidden_word):
-                print("bark bark bark")
-
             print ("rewards (green - 2, yellow - 1, grey - 0): {}".format(reward))
-            print (obs)
             break
         except InvalidWordException:
             pass

@@ -11,7 +11,7 @@ from utils.utils import load_word_list, convert_encoded_array_to_human_readable
 from actor_critic.agents import GreedyAgent
 
 
-def run_trial(a2c_agent, verbose):
+def run_trial(a2c_agent, verbose, word_list=[]):
     env = gym.make('Wordle-v0')
 
 
@@ -20,8 +20,9 @@ def run_trial(a2c_agent, verbose):
 
     games = []
     num_wins = 0
-    for i in range(NUM_ITER):
+    for i in word_list:
         obs = env.reset()
+        env.hidden_word = [ord(x) - 97 for x in i]
         done = False
 
         actions = []
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--words_dir')
-    parser.add_argument('-m', '--embedding_size', type=int, default=32)
+    parser.add_argument('-m', '--embedding_size', type=int, default=64)
 
     args = parser.parse_args()
 
@@ -67,4 +68,4 @@ if __name__ == '__main__':
 
     agent = GreedyAgent(model, word_list)
 
-    print(run_trial(agent, True))
+    print(run_trial(agent, True, word_list=word_list))

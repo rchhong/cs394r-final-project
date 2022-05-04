@@ -38,6 +38,7 @@ def strToEncode(lines):
 
 with open(filename, "r") as f:
     WORDS = strToEncode(f.readlines())
+    WORDLISTIDX = list (range (len(WORDS)))
 
 
 class WordleEnv(gym.Env):
@@ -173,7 +174,7 @@ class WordleEnv(gym.Env):
                 reward = -1.0
                 done = False
             else:
-                reward = -10.0
+                reward = np.sum (self.board[board_row_idx, :] - 1) * 2
                 done = True
 
 
@@ -193,9 +194,15 @@ class WordleEnv(gym.Env):
         
         return return_state
 
-    def reset(self, seed: Optional[int] = None):
+    def reset(self, seed: Optional[int] = None, weight = None):
         # super().reset(seed=seed)
-        self.hidden_word = random.choice(WORDS)
+        if (weight is not None):
+            self.hidden_word_idx = random.choices(WORDLISTIDX, weights=weight)[0] #random.choice(WORDS)
+            
+        else:
+            self.hidden_word_idx = random.choice(WORDLISTIDX)
+        self.hidden_word = WORDS[self.hidden_word_idx]
+
         self.guesses_left = GAME_LENGTH
         self.board = np.negative(
             np.ones(shape=(GAME_LENGTH, WORD_LENGTH), dtype=int))
