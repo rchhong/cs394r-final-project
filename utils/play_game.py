@@ -2,15 +2,15 @@ import gym
 import gym_wordle
 import torch
 from gym_wordle.exceptions import InvalidWordException
-from actor_critic.a2c import ActorCriticNet
-from actor_critic.agents.prob_agent import ProbabilisticAgent
+from reinforce.reinforce import REINFORCEWithBaseline
+from agents.prob_agent import ProbabilisticAgent
 from utils import load_model
 from utils.const import STATE_SIZE
 from utils.utils import load_word_list, convert_encoded_array_to_human_readable
-from actor_critic.agents import GreedyAgent
+from agents import GreedyAgent
 
 
-def play_game_a2c(a2c_agent, visualize):
+def play_game_reinforce(a2c_agent, visualize):
     env = gym.make('Wordle-v0')
 
     obs = env.reset()
@@ -48,9 +48,9 @@ if __name__ == '__main__':
 
     word_list = load_word_list(args.words_dir)
 
-    model = ActorCriticNet(STATE_SIZE, word_list, args.embedding_size)
+    model = REINFORCEWithBaseline(STATE_SIZE, word_list, args.embedding_size)
     load_model(model, "a2c")
 
     agent = GreedyAgent(model, word_list)
 
-    print(play_game_a2c(agent, True))
+    print(play_game_reinforce(agent, True))

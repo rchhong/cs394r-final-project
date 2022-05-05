@@ -9,17 +9,20 @@ import torch.nn.functional as F
 import torch.utils.tensorboard as tb
 import numpy as np
 
-from actor_critic.a2c import ActorCriticNet
-from actor_critic.agents.prob_agent import ProbabilisticAgent
+from reinforce.reinforce import REINFORCEWithBaseline
+from agents.prob_agent import ProbabilisticAgent
 
 from utils import STATE_SIZE, load_model, load_word_list, save_model
-from utils.play_game import play_game_a2c
+from utils.play_game import play_game_reinforce
 from utils.utils import convert_encoded_array_to_human_readable
+from datetime import datetime
 from tqdm import tqdm
 
-MODEL_NAME = "a2c"
+
+MODEL_NAME = "reinforce"
 EMBEDDING_SIZE = 64
 rng = np.random.default_rng(12345)
+now = datetime.now()
 
 # Statistics
 num_wins = 0
@@ -37,15 +40,15 @@ def train(args):
     global word_weights
     word_weights = np.ones((len(word_list)))
 
-    model = ActorCriticNet(STATE_SIZE, word_list, EMBEDDING_SIZE)
+    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
     agent = ProbabilisticAgent(model, word_list)
     env = gym.make("Wordle-v0")
 
     train_logger = None
     valid_logger = None
     if args.log_dir is not None:
-        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'train'), flush_secs=1)
-        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'valid'), flush_secs=1)
+        train_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'train'), flush_secs=1)
+        valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'valid'), flush_secs=1)
 
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model = model.to(device)
@@ -60,33 +63,10 @@ def train(args):
     # TODO: Kaiming initialization
     # TODO: Lower LR
     for num_episodes in tqdm (range(args.num_episodes)):
-
-        # if (num_episodes % 200 == 0):
-        #     print("Running Benchmark")
-        #     win_amt = 0
-        #     #Reset Word_weights here
-        #     with torch.no_grad():
-        #         for idx, word in enumerate (tqdm(word_list)):
-                    
-        #             state = env.reset()
-        #             env.hidden_word = [ord(c) - 97 for c in word]
-        #             for i in range (6):
-        #                 action, log_prob_action, entropy, state_value = agent(torch.Tensor(state))
-        #                 state, reward, done, __ = env.step(action)
-
-        #                 if (done):
-        #                     break
-        #             if (reward == 10):
-        #                 word_weights[idx] = 1
-        #                 win_amt += 1
-        #             else:
-        #                 word_weights[idx] += 1
-                        
-        #     print ("Benchmark completed: Win Rate of all words: {}".format(win_amt / len(word_list)))
         model.train()
 
         # Play some games, gather experiences
-        total_returns, log_prob_actions, entropies, state_values = generate_a2c_data(agent, args.batch_size, args.gamma, env)
+        total_returns, log_prob_actions, entropies, state_values = generate_reinforce_data(agent, args.batch_size, args.gamma, env)
 
         if train_logger:
             train_logger.add_scalar("cumulative_win_rate", num_wins / num_played, global_step=global_step)
@@ -112,7 +92,7 @@ def train(args):
             if(global_step % 100 == 0):
                 if(train_logger):
                     # Make the model play a game
-                    games = [play_game_a2c(agent, False) for i in range(5)]
+                    games = [play_game_reinforce(agent, False) for i in range(5)]
                     for game in games:
                         valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
                 # SAVE MODEL EVERY 100 STEPS
@@ -160,7 +140,8 @@ def load_model(model, name):
 
 warm_start_brackets = [0.01]
 
-def generate_a2c_data(agent, batch_size, gamma, env):
+# def generate_a2c_data(agent, batch_size, gamma, env):
+def generate_reinforce_data(agent, batch_size, gamma, env):
     global num_wins
     global num_played
     global average_rewards_per_batch
@@ -186,9 +167,6 @@ def generate_a2c_data(agent, batch_size, gamma, env):
 
         ep_reward = 0
         rewards = []
-
-        # for each episode, only run 9999 steps so that we don't
-        # infinite loop while learning
 
         if(record_data):
             del sample_game[:]
@@ -218,7 +196,6 @@ def generate_a2c_data(agent, batch_size, gamma, env):
             sample_game.append(env.hidden_word)
         record_data = False
 
-        # TODO: Change to win_rate per batch
         total_rewards += ep_reward
         num_played += 1
         if(action == list(env.hidden_word)):
