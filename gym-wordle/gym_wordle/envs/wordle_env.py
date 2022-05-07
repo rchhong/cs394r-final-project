@@ -22,6 +22,11 @@ filename = pkg_resources.resource_filename(
     'data/5_words.txt'
 )
 
+possible_solutions_file = pkg_resources.resource_filename(
+    'gym_wordle',
+    'data/possible_solutions.txt'
+)
+
 def encodeToStr(encoding):
     string = ""
     for enc in encoding:
@@ -39,6 +44,10 @@ def strToEncode(lines):
 with open(filename, "r") as f:
     WORDS = strToEncode(f.readlines())
     WORDLISTIDX = list (range (len(WORDS)))
+
+with open(possible_solutions_file, "r") as f:
+    POSSIBLE_SOLUTIONS = strToEncode(f.readlines())
+    POSSIBLE_SOLUTIONS_IDX = list(range(len(POSSIBLE_SOLUTIONS)))
 
 
 class WordleEnv(gym.Env):
@@ -80,7 +89,7 @@ class WordleEnv(gym.Env):
             or in the correct position.
     """
 
-    def __init__(self):
+    def __init__(self, full_problem = True):
         super(WordleEnv, self).__init__()
         self.action_space = spaces.MultiDiscrete([26] * WORD_LENGTH)
         self.observation_space = spaces.Dict({
@@ -91,6 +100,7 @@ class WordleEnv(gym.Env):
         self.guesses = []
         self.state_space = np.zeros((26, 5, 3), dtype=np.int0)
         self.state_space[:,:,1] = 1
+        self.full_problem = full_problem
 
     def step(self, action):
         assert self.action_space.contains(action)
@@ -110,7 +120,7 @@ class WordleEnv(gym.Env):
             if self.hidden_word[idx] == char:
                 encoding = 2
 
-                #Set everything else to 0 except correct character 
+                #Set everything else to 0 except correct character
                 self.state_space[:, idx, 0] = 1
                 self.state_space[char, idx, :] = 0
                 self.state_space[char, idx, 2] = 1
@@ -156,7 +166,7 @@ class WordleEnv(gym.Env):
         reward = 0
 
         # reward = np.sum(self.board[board_row_idx, :])
-        
+
         # # check to see if game is over
         # if all(self.board[board_row_idx, :] == 2):
         #     done = True
@@ -181,7 +191,7 @@ class WordleEnv(gym.Env):
         return self._get_obs(), reward, done, {}
 
     def _get_obs(self):
-        
+
         # for i in range (26):
         #     # print (self.state_space[i])
         #     print (chr(i + 97), np.argmax (self.state_space[i], axis=1))
@@ -191,17 +201,24 @@ class WordleEnv(gym.Env):
         return_state[0:26] = np.where(self.alphabet == -1, 0, 1)
         return_state[26:-6] = self.state_space.flatten()
         return_state[6 * 26 + self.guesses_left - 1] = 1
-        
+
         return return_state
 
     def reset(self, seed: Optional[int] = None, weight = None):
         # super().reset(seed=seed)
-        if (weight is not None):
-            self.hidden_word_idx = random.choices(WORDLISTIDX, weights=weight)[0] #random.choice(WORDS)
-            
+        if(self.full_problem):
+            if (weight is not None):
+                self.hidden_word_idx = random.choices(POSSIBLE_SOLUTIONS_IDX, weights=weight)[0] #random.choice(WORDS)
+            else:
+                self.hidden_word_idx = random.choice(POSSIBLE_SOLUTIONS_IDX)
+            self.hidden_word = POSSIBLE_SOLUTIONS[self.hidden_word_idx]
+
         else:
-            self.hidden_word_idx = random.choice(WORDLISTIDX)
-        self.hidden_word = WORDS[self.hidden_word_idx]
+            if (weight is not None):
+                self.hidden_word_idx = random.choices(WORDLISTIDX, weights=weight)[0] #random.choice(WORDS)
+            else:
+                self.hidden_word_idx = random.choice(WORDLISTIDX)
+            self.hidden_word = WORDS[self.hidden_word_idx]
 
         self.guesses_left = GAME_LENGTH
         self.board = np.negative(

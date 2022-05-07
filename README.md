@@ -6,6 +6,8 @@ Write up can be found [here](https://www.overleaf.com/project/624b384a670a21fbba
 ## Acknowledgements
 Utilized a modified version of the wordle gym found [here](https://github.com/zach-lawless/gym-wordle)
 
+Utilizes 3B1B's entropy agent as a comparison found [here](https://github.com/3b1b/videos/tree/master/_2022/wordle)
+
 ## Dependencies
 These can be found in the file `requirements.txt`, but the purpose of each package will be outlined here
 

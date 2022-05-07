@@ -51,7 +51,7 @@ def save_model(model, name):
     return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name))
 
 def load_model(model, name):
-    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
+    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name), map_location=torch.device('cpu')))
 
 def generate_dataloader(batched_data):
     pass

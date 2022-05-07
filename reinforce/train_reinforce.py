@@ -24,6 +24,8 @@ EMBEDDING_SIZE = 64
 rng = np.random.default_rng(12345)
 now = datetime.now()
 
+FULL_PROBLEM = True
+
 # Statistics
 num_wins = 0
 num_played = 0
@@ -37,12 +39,19 @@ word_weights = None
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
     word_list = load_word_list(args.words_dir)
+    possible_solutions = None
+    if(args.possible_solutions_dir):
+        possible_solutions = load_word_list(args.possible_solutions_dir)
+
+    assert(FULL_PROBLEM and possible_solutions)
+
     global word_weights
-    word_weights = np.ones((len(word_list)))
+    weight_length = len(possible_solutions) if possible_solutions else len(word_list)
+    word_weights = np.ones(weight_length)
 
     model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
     agent = ProbabilisticAgent(model, word_list)
-    env = gym.make("Wordle-v0")
+    env = gym.make("Wordle-v0", full_problem = FULL_PROBLEM)
 
     train_logger = None
     valid_logger = None
@@ -124,12 +133,13 @@ def loss(total_returns, log_prob_actions, entropies, state_values, critic_beta, 
         actor_losses.append(-advantage * log_prob)
 
         # Critic Loss - MSE
-        critic_losses.append(F.smooth_l1_loss(state_value, torch.tensor([ret])))
+        critic_losses.append(F.smooth_l1_loss(state_value.float(), torch.tensor([ret]).float()))
 
     loss = (torch.stack(actor_losses).sum() - entropy_beta * torch.stack(entropies).sum()) + critic_beta * torch.stack(critic_losses).sum()
+
     # print("loss:", loss)
 
-    return loss
+    return loss.float()
 
 def save_model(model, name):
     return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name))
@@ -225,6 +235,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--log_dir')
     parser.add_argument('--words_dir')
+    parser.add_argument('--possible_solutions_dir')
     # Put custom arguments here
     parser.add_argument('-n', '--num_episodes', type=int, default=10000)
     parser.add_argument('-b', '--batch_size', type=float, default=64)
