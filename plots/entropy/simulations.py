@@ -900,4 +900,13 @@ def run_trial_entropy(first_guess = "salet"):
         # hard_mode=True,
     )
 
-    return results['score_distribution'], results['average_score']
+    return results['score_distribution'], results['average_score'], results['game_results']
+
+def get_entropies_of_all_words():
+    all_words = get_word_list()
+    priors=get_true_wordle_prior()
+
+    weights = get_weights(all_words, priors)
+    ents = get_entropies(all_words, all_words, weights)
+
+    return ents

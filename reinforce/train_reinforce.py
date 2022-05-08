@@ -35,9 +35,17 @@ num_wins_batch = 0
 
 #Starts with all ones. Add one if model fails on that word (make it more likely the model returns that word)
 word_weights = None
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
+    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
+    model = model.to(device)
+    agent = ProbabilisticAgent(model, word_list)
+    env = gym.make("Wordle-v0", full_problem = FULL_PROBLEM)
+
+
+
     word_list = load_word_list(args.words_dir)
     possible_solutions = None
     if(args.possible_solutions_dir):
@@ -49,9 +57,7 @@ def train(args):
     weight_length = len(possible_solutions) if possible_solutions else len(word_list)
     word_weights = np.ones(weight_length)
 
-    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
-    agent = ProbabilisticAgent(model, word_list)
-    env = gym.make("Wordle-v0", full_problem = FULL_PROBLEM)
+
 
     train_logger = None
     valid_logger = None
@@ -59,8 +65,6 @@ def train(args):
         train_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'train'), flush_secs=1)
         valid_logger = tb.SummaryWriter(path.join(args.log_dir, 'REINFORCE', now.strftime("%Y%m%d-%H%M%S"), 'valid'), flush_secs=1)
 
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model = model.to(device)
     if args.continue_training:
         load_model(model, MODEL_NAME)
 
@@ -98,7 +102,7 @@ def train(args):
         if(train_logger):
             train_logger.add_scalar("loss", loss_val, global_step=global_step)
 
-            if(global_step % 100 == 0):
+            if(global_step % 1000 == 0):
                 if(train_logger):
                     # Make the model play a game
                     games = [play_game_reinforce(agent, False) for i in range(5)]
@@ -112,7 +116,7 @@ def train(args):
 
         global_step += 1
 
-        save_model(model, MODEL_NAME)
+    save_model(model, MODEL_NAME)
 
 def loss(total_returns, log_prob_actions, entropies, state_values, critic_beta, entropy_beta):
     # No divide by 0
@@ -133,7 +137,7 @@ def loss(total_returns, log_prob_actions, entropies, state_values, critic_beta, 
         actor_losses.append(-advantage * log_prob)
 
         # Critic Loss - MSE
-        critic_losses.append(F.smooth_l1_loss(state_value.float(), torch.tensor([ret]).float()))
+        critic_losses.append(F.smooth_l1_loss(state_value.float(), torch.tensor([ret]).float().to(device)))
 
     loss = (torch.stack(actor_losses).sum() - entropy_beta * torch.stack(entropies).sum()) + critic_beta * torch.stack(critic_losses).sum()
 
@@ -146,9 +150,6 @@ def save_model(model, name):
 
 def load_model(model, name):
     model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
-
-
-warm_start_brackets = [0.01]
 
 # def generate_a2c_data(agent, batch_size, gamma, env):
 def generate_reinforce_data(agent, batch_size, gamma, env):
@@ -184,7 +185,7 @@ def generate_reinforce_data(agent, batch_size, gamma, env):
         for t in range(6):
 
             # select action from policy
-            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state), t * warm_start_brackets[min (num_played // 1000, len (warm_start_brackets) - 1) ] / 6, env.hidden_word_idx)
+            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state).to(device), t * 0.01 / 6, env.hidden_word_idx)
             if(record_data):
                 sample_game.append(action)
             # print("action:", action)

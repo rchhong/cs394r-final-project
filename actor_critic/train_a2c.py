@@ -91,17 +91,17 @@ def train(args):
             train_logger.add_scalar("loss", loss_val, global_step=global_step)
 
             if(global_step % 100 == 0):
-                if(train_logger):
+                # if(train_logger):
                     # Make the model play a game
-                    games = [play_game_a2c(agent, False) for i in range(5)]
-                    for game in games:
-                        valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
+                    # games = [play_game_a2c(agent, False) for i in range(5)]
+                    # for game in games:
+                    #     valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
                 # SAVE MODEL EVERY 100 STEPS
-                save_model(model, MODEL_NAME)
+            save_model(model, MODEL_NAME)
 
         global_step += 1
 
-        save_model(model, MODEL_NAME)
+    save_model(model, MODEL_NAME)
 
 def loss(td_errors, log_prob_actions, entropies, critic_beta, entropy_beta):
     # No divide by 0
@@ -129,9 +129,6 @@ def save_model(model, name):
 
 def load_model(model, name):
     model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
-
-
-warm_start_brackets = [0.01]
 
 def generate_a2c_data(agent, batch_size, gamma, env):
     global num_wins
@@ -167,7 +164,7 @@ def generate_a2c_data(agent, batch_size, gamma, env):
         for t in range(1, 10000):
             states.append(state)
             # select action from policy
-            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state), t * warm_start_brackets[min (num_played // 1000, len (warm_start_brackets) - 1) ] / 6, env.hidden_word_idx)
+            action, log_prob_action, entropy, state_value = agent(torch.Tensor(state).to(device), t * 0.01 / 6, env.hidden_word_idx)
             if(record_data):
                 sample_game.append(action)
             # print("action:", action)
