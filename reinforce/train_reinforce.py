@@ -147,7 +147,10 @@ def save_model(model, name):
     return torch.save(model.state_dict(), path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name))
 
 def load_model(model, name):
-    model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
+    if not torch.cuda.is_available():
+        model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name), map_location=torch.device('cpu')))
+    else:
+        model.load_state_dict(torch.load(path.join(path.dirname(path.abspath(__file__)), '../models', '%s.th' % name)))
 
 # def generate_a2c_data(agent, batch_size, gamma, env):
 def generate_reinforce_data(agent, batch_size, gamma, env):
