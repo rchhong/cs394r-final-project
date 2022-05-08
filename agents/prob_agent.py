@@ -9,7 +9,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 class ProbabilisticAgent:
     def __init__(self, net, word_list):
-        self.net = net
+        self.net = net.to(device)
         self.word_list = word_list
         self.net_time = 0
         self.action_time = 0
@@ -19,7 +19,7 @@ class ProbabilisticAgent:
 
         # start = time.time()
 
-        action_log_probs, state_value = self.net(state)
+        action_log_probs, state_value = self.net(state.to(device))
 
         # self.net_time += time.time() - start
 

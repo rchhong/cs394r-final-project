@@ -3,6 +3,7 @@ import numpy as np
 from os import path
 
 from utils.const import NUM_CHARACTERS_ALPHABET
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # For NN and embeddings
 def convert_to_one_hot(word_list):
@@ -13,7 +14,7 @@ def convert_to_one_hot(word_list):
             index = ord(char) - ord('a')
             ret[i, NUM_CHARACTERS_ALPHABET * j + index] = 1
 
-    return torch.tensor(ret)
+    return torch.tensor(ret).to(device)
 
 # For agents
 def convert_to_char_index(word_list):

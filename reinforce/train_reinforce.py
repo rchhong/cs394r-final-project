@@ -39,13 +39,6 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 # TECHICALLY REINFORCE WITH BASELINE FOR NOW
 def train(args):
-    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
-    model = model.to(device)
-    agent = ProbabilisticAgent(model, word_list)
-    env = gym.make("Wordle-v0", full_problem = FULL_PROBLEM)
-
-
-
     word_list = load_word_list(args.words_dir)
     possible_solutions = None
     if(args.possible_solutions_dir):
@@ -56,6 +49,11 @@ def train(args):
     global word_weights
     weight_length = len(possible_solutions) if possible_solutions else len(word_list)
     word_weights = np.ones(weight_length)
+
+    model = REINFORCEWithBaseline(STATE_SIZE, word_list, EMBEDDING_SIZE)
+    model = model.to(device)
+    agent = ProbabilisticAgent(model, word_list)
+    env = gym.make("Wordle-v0", full_problem = FULL_PROBLEM)
 
 
 
