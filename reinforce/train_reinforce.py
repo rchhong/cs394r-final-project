@@ -24,7 +24,7 @@ EMBEDDING_SIZE = 64
 rng = np.random.default_rng(12345)
 now = datetime.now()
 
-FULL_PROBLEM = True
+FULL_PROBLEM = False
 
 # Statistics
 num_wins = 0
@@ -44,7 +44,10 @@ def train(args):
     if(args.possible_solutions_dir):
         possible_solutions = load_word_list(args.possible_solutions_dir)
 
-    assert(FULL_PROBLEM and possible_solutions)
+    if(FULL_PROBLEM):
+        assert(possible_solutions)
+    else:
+        assert(not possible_solutions)
 
     global word_weights
     weight_length = len(possible_solutions) if possible_solutions else len(word_list)
