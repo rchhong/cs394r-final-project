@@ -33,9 +33,16 @@ mkdir models
 ```
 
 ## REINFORCE with Baseline
+WARNING: MAKE SURE TO CHANGE THE BOOLEAN AT THE TOP OF THE FILE IF YOU ARE NOT RUNNING ON THE VERSION WITH LIMITED TARGETS
+
 To run the training for REINFORCE with baseline, run the following command from the project root directory.
 ```shell
 python3 -m reinforce.train_reinforce --words_dir ./gym-wordle/gym_wordle/data/5_words.txt --log_dir log
+```
+
+If running the variant with restricted targets.
+```shell
+python3 -m reinforce.train_reinforce --words_dir ./gym-wordle/gym_wordle/data/5_words.txt --log_dir log -n 60000 --possible_solutions_dir ./gym-wordle/gym_wordle/data/possible_solutions.txt -c
 ```
 
 TensorBoard logging can be accessed in `log/REINFORCE`.
