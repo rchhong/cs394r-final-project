@@ -97,7 +97,7 @@ def train(args):
                     # for game in games:
                     #     valid_logger.add_text(tag = "SAMPLE GAMES", text_string = "ACTIONS: " + str(game[0]) + " GOAL: " + str(game[1]), global_step=global_step)
                 # SAVE MODEL EVERY 100 STEPS
-            save_model(model, MODEL_NAME)
+                save_model(model, MODEL_NAME)
 
         global_step += 1
 

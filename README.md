@@ -54,3 +54,5 @@ python3 -m actor_critic.train_a2c --words_dir ./gym-wordle/gym_wordle/data/5_wor
 ```
 
 TensorBoard logging can be accessed in `log/A2C`.
+
+This may not work with CUDA, did not test this with it.
